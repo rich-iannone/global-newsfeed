@@ -1,15 +1,19 @@
 import requests
 import csv
 import os
+from io import StringIO
 import logging
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
+import polars as pl
+from openai import OpenAI
 
 # Load environment variables from .env file
 load_dotenv()
 
 NYTIMES_API_KEY = os.getenv('NYTIMES_API_KEY')
 NYTIMES_API_URL = 'https://api.nytimes.com/svc/topstories/v2'
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 CSV_DIR_PATH = 'static/csv_files'  # Directory to store CSV files
 
 # Ensure the CSV directory exists
@@ -58,29 +62,109 @@ def fetch_news_data(max_articles=10, time_threshold_minutes=10):
     
     logging.info(f"Writing CSV file: {csv_file_path}")
     with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['title', 'description', 'url', 'source', 'country']
+        fieldnames = ['uri','title', 'description', 'url', 'source', 'geolocation']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         
         for article in articles:
             logging.debug(f"Processing article: {article}")
             if isinstance(article, dict):
+
+                # Get the uri so it serves as a unique identifier
+                uri = article.get('uri', '')
+
+                # If the `item_type` is not 'Article', skip the article
+                if article.get('item_type') != 'Article':
+                    logging.debug(f"Skipping non-article item: {article}")
+                    continue
+
+                # Get the country from the first `geo_facet` item;
+                # if not present then skip the article
+                geolocation = article.get('geo_facet', [''])[0] if article.get('geo_facet') else ''
+                if not geolocation:
+                    logging.debug(f"Skipping article without any location information: {article}")
+                    continue
+
                 title = article.get('title', '') or ''
                 description = article.get('abstract', '') or ''
                 url = article.get('url', '')
                 source = 'New York Times'
-                country = 'US' if section == 'us' else 'World'
                 writer.writerow({
+                    'uri': uri,
                     'title': title,
                     'description': description,
                     'url': url,
                     'source': source,
-                    'country': country
+                    'geolocation': geolocation
                 })
             else:
                 logging.error(f"Unexpected article format: {article}")
     
     logging.info("CSV file written successfully.")
+
+def augment_news_data():
+    logging.debug("Augmenting news data")
+
+    # Get the newest CSV file
+    csv_file_path = get_newest_csv_file()
+    load_dotenv()  # Loads OPENAI_API_KEY from the .env file
+
+    # Create an OpenAI client
+    client = OpenAI()
+
+    # Read the CSV file into a Polars table
+    tbl_data = pl.read_csv(csv_file_path)
+
+    # If the DataFrame has the columns 'city', 'country', 'latitude', and 'longitude', then skip
+    # the augmentation
+    if 'city' in tbl_data.columns and 'country' in tbl_data.columns and 'latitude' in tbl_data.columns and 'longitude' in tbl_data.columns:
+        logging.info("DataFrame already has the required columns. Skipping augmentation.")
+        return
+
+    # Select the columns we need
+    tbl_data = tbl_data.select(["uri", "title", "description", "geolocation"])
+    
+    # Convert the Polars table to JSON
+    tbl_json = tbl_data.write_json()
+
+    # The prompt for the OpenAI API will be provided as a series of messages
+    # that 
+    messages = [
+        {"role": "system", "content": "You are an expert at surmmising the geolocation of a news story when"
+    "provided with only the title of the news story, a short summary of the story, and an unstructured"
+    "location name (could be a country, a city within a country, etc.)."},
+    {"role": "user", "content": f"""
+    I'm providing JSON text with the schema: 'uri', 'title',
+    'description', and 'geolocation'. Each member is a record of a news story. What I need is the
+    city and the country associated with the news story. If you cannot guess the city or its not
+    clear, use the capital city of the country. The country needs to be a two-letter ISO country code.
+    I will pass in the JSON data after the break
+    ----
+    {tbl_json}
+    ----
+    What I need returned is a JSON string with the same number of records in the same order as the
+    input. The fields required are: 'city', 'country', 'latitude', and 'longitude'. I would also like
+    the input 'uri' field to be included so that I can join the returned JSON with the complete
+    dataset (that 'uri' field will serve as an ID for each member"""},
+    ]
+
+    # Call out to the OpenAI API to generate a response.
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+    )
+
+    response_json = response.choices[0].message.content
+
+    # Remove the fenced code block from the response
+    response_json = response_json.replace('```json\n', '').replace('\n```', '')
+
+    # Write the augmented data to the same CSV file through a join on the 'uri' field
+    tbl_augmented = pl.read_json(StringIO(response_json))
+    tbl_augmented = tbl_augmented.select(["uri", "city", "country", "latitude", "longitude"])
+    tbl_complete = tbl_data.join(tbl_augmented, on="uri", how="left")
+    tbl_complete.write_csv(csv_file_path)
+
 
 def get_newest_csv_file():
     logging.debug("Selecting the newest CSV file")
