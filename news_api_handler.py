@@ -14,12 +14,12 @@ load_dotenv()
 NYTIMES_API_KEY = os.getenv('NYTIMES_API_KEY')
 NYTIMES_API_URL = 'https://api.nytimes.com/svc/topstories/v2'
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-CSV_DIR_PATH = 'static/csv_files'  # Directory to store CSV files
+CSV_DIR_PATH = "static/csv_files"
 
 # Ensure the CSV directory exists
 os.makedirs(CSV_DIR_PATH, exist_ok=True)
 
-def fetch_news_data(max_articles=10, time_threshold_minutes=10):
+def fetch_news_data(max_articles=20, time_threshold_minutes=10):
     logging.debug("Fetching news from New York Times API")
     
     if not NYTIMES_API_KEY:
@@ -107,7 +107,9 @@ def augment_news_data():
 
     # Get the newest CSV file
     csv_file_path = get_newest_csv_file()
-    load_dotenv()  # Loads OPENAI_API_KEY from the .env file
+
+    # Load OPENAI_API_KEY from the .env file
+    load_dotenv()
 
     # Create an OpenAI client
     client = OpenAI()
@@ -115,20 +117,20 @@ def augment_news_data():
     # Read the CSV file into a Polars table
     tbl_data = pl.read_csv(csv_file_path)
 
-    # If the DataFrame has the columns 'city', 'country', 'latitude', and 'longitude', then skip
-    # the augmentation
-    if 'city' in tbl_data.columns and 'country' in tbl_data.columns and 'latitude' in tbl_data.columns and 'longitude' in tbl_data.columns:
+    # If the DataFrame has the columns 'latitude', and 'longitude', then skip the augmentation
+    if 'latitude' in tbl_data.columns and 'longitude' in tbl_data.columns:
         logging.info("DataFrame already has the required columns. Skipping augmentation.")
         return
-
-    # Select the columns we need
-    tbl_data = tbl_data.select(["uri", "title", "description", "geolocation"])
+    
+    # Select the columns we need for conversion to JSON
+    tbl_data_selected = tbl_data.select(["uri", "title", "description", "geolocation"])
     
     # Convert the Polars table to JSON
-    tbl_json = tbl_data.write_json()
+    tbl_json = tbl_data_selected.write_json()
 
-    # The prompt for the OpenAI API will be provided as a series of messages
-    # that 
+    # The prompt for the OpenAI API will be provided as a series of messages that guide the
+    # model toward providing a consistent JSON blob with new fields that are important to the
+    # application and are difficult to generate through conventional code
     messages = [
         {"role": "system", "content": "You are an expert at surmising the geolocation of a news story when"
     "provided with only the title of the news story, a short summary of the story, and an unstructured"
@@ -146,7 +148,11 @@ def augment_news_data():
     What I need returned is a JSON string with the same number of records in the same order as the
     input. The fields required are: 'city', 'country', 'latitude', and 'longitude'. I would also like
     the input 'uri' field to be included so that I can join the returned JSON with the complete
-    dataset (that 'uri' field will serve as an ID for each member"""},
+    dataset (that 'uri' field will serve as an ID for each member.
+
+    One last thing, be sure to give me just the JSON string without any conversational text before
+    and after. I want to be sure I can depend on your output as consistent input for my processing.
+    """},
     ]
 
     # Call out to the OpenAI API to generate a response.
@@ -157,7 +163,7 @@ def augment_news_data():
 
     response_json = response.choices[0].message.content
 
-    # Remove the fenced code block from the response
+    # Remove the fenced code block text (if present) from the response
     response_json = response_json.replace('```json\n', '').replace('\n```', '')
 
     # Write the augmented data to the same CSV file through a join on the 'uri' field
