@@ -1,10 +1,9 @@
 from flask import Flask, render_template
-import openai
-from great_tables import GT
-import polars as pl
 import os
 import logging
-from news_api_handler import fetch_and_write_news_to_csv
+import polars as pl
+from great_tables import GT
+from news_api_handler import fetch_news_data, CSV_DIR_PATH
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -15,23 +14,39 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 
 app = Flask(__name__)
 
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-
 # Ensure the static directory exists
 os.makedirs('static', exist_ok=True)
-
-openai.api_key = OPENAI_API_KEY
 
 @app.route('/')
 def index():
     logging.debug("Starting index route")
-    fetch_and_write_news_to_csv()
-    table_html = make_table_from_csv()
+    fetch_news_data()
+    csv_file_path = get_newest_csv_file()
+    table_html = make_table_from_csv(csv_file_path)
     return render_template('index.html', table_html=table_html)
 
-def make_table_from_csv():
-    logging.debug("Reading CSV file to create HTML table")
-    table = pl.read_csv('static/news_data.csv')
+def get_newest_csv_file():
+    logging.debug("Selecting the newest CSV file")
+    csv_files = sorted(
+        [f for f in os.listdir(CSV_DIR_PATH) if f.startswith('news_data_') and f.endswith('.csv')],
+        key=lambda x: os.path.getmtime(os.path.join(CSV_DIR_PATH, x)),
+        reverse=True
+    )
+    if csv_files:
+        newest_file = os.path.join(CSV_DIR_PATH, csv_files[0])
+        logging.info(f"Newest CSV file selected: {newest_file}")
+        return newest_file
+    else:
+        logging.warning("No CSV files found")
+        return None
+
+def make_table_from_csv(csv_file_path):
+    if not csv_file_path:
+        logging.error("No CSV file path provided")
+        return "<p>No data available</p>"
+    
+    logging.debug(f"Reading CSV file to create HTML table: {csv_file_path}")
+    table = pl.read_csv(csv_file_path)
     gt_table = GT(table)
     
     table_html = gt_table.as_raw_html()
