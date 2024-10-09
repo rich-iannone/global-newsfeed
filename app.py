@@ -1,10 +1,9 @@
 from flask import Flask, render_template
 import os
-import re
 import logging
 import polars as pl
-from great_tables import GT
-from news_api_handler import fetch_news_data, augment_news_data, CSV_DIR_PATH
+from great_tables import GT, google_font
+from news_api_handler import cull_old_csv_files, fetch_news_data, augment_news_data, CSV_DIR_PATH
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -22,8 +21,13 @@ os.makedirs('static', exist_ok=True)
 def index():
     logging.debug("Starting index route")
 
-    # This will fetch the news data and write it to a CSV file
-    fetch_news_data()
+    # Cull old CSV files
+    cull_old_csv_files()
+
+    # This will fetch the news data and write it to a CSV file; here we are relying on the
+    # news API to constantly provide fresh articles, so, only the most recent file is needed
+    # for the application to function
+    fetch_news_data(max_articles=30, time_threshold_minutes=10)
 
     # Augment the news data
     augment_news_data()
@@ -64,10 +68,39 @@ def make_table_from_csv(csv_file_path):
     lat_values = table['latitude'].to_list()
     lng_values = table['longitude'].to_list()
 
+    # Combine the title and description into a single column, providing some styling as well
+    table = (
+        table
+        .with_columns(title_description=pl.concat_str(
+            '<div style="font-size: 18px; font-weight: bold; padding-bottom: 4px; text-wrap: balance;">' +
+            pl.col("title") +
+            "</div>" +
+            '<div style="font-size: 14px; font-style: italic; display: table-row; text-wrap: balance;">'+
+            pl.col("description") +
+            "</div>"
+        ))
+        .with_columns(city_country=pl.concat_str(
+            '<div style="font-size: 14px;">' +
+            pl.col("city") + "," +
+            "</div>" +
+            '<div style="font-size: 14px;">'+
+            pl.col("country") +
+            "</div>"
+        ))
+        .select(["title_description", "city_country"])
+    )
+
     gt_table = (
         GT(table)
-        .cols_hide(["uri", "geolocation", "latitude", "longitude"])
-        .tab_options(column_labels_hidden=True)
+        .fmt_markdown(columns=["title_description", "city_country"])
+        .opt_table_font(font=google_font(name="Noto Serif"))
+        .cols_width(cases={"city_country": "20%"})
+        .cols_align(align="center", columns="city_country")
+        .tab_options(
+            table_background_color="#386890",
+            table_font_color="white",
+            column_labels_hidden=True
+        )
     )
     
     # Convert the table to HTML
