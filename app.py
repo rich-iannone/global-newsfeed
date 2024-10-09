@@ -3,7 +3,7 @@ import os
 import logging
 import polars as pl
 from great_tables import GT
-from news_api_handler import fetch_news_data, CSV_DIR_PATH
+from news_api_handler import fetch_news_data, augment_news_data, CSV_DIR_PATH
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
@@ -20,9 +20,20 @@ os.makedirs('static', exist_ok=True)
 @app.route('/')
 def index():
     logging.debug("Starting index route")
+
+    # This will fetch the news data and write it to a CSV file
     fetch_news_data()
+
+    # Augment the news data
+    augment_news_data()
+
+    # Get the newest CSV file
     csv_file_path = get_newest_csv_file()
+
+    # Generate the HTML table from the CSV file
     table_html = make_table_from_csv(csv_file_path)
+
+    # Render the HTML template with the table
     return render_template('index.html', table_html=table_html)
 
 def get_newest_csv_file():
@@ -47,7 +58,10 @@ def make_table_from_csv(csv_file_path):
     
     logging.debug(f"Reading CSV file to create HTML table: {csv_file_path}")
     table = pl.read_csv(csv_file_path)
-    gt_table = GT(table)
+    gt_table = (
+        GT(table)
+        #.cols_hide(columns=["uri", "geolocation", "city", "country"])
+    )
     
     table_html = gt_table.as_raw_html()
     logging.debug("HTML table created")
