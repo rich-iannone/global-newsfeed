@@ -1,5 +1,6 @@
 from flask import Flask, render_template
 import os
+import re
 import logging
 import polars as pl
 from great_tables import GT
@@ -58,42 +59,35 @@ def make_table_from_csv(csv_file_path):
     
     logging.debug(f"Reading CSV file to create HTML table: {csv_file_path}")
     table = pl.read_csv(csv_file_path)
-    gt_table = GT(table)
+
+    # Get a list of all the latitude and longitude values
+    lat_values = table['latitude'].to_list()
+    lng_values = table['longitude'].to_list()
+
+    gt_table = (
+        GT(table)
+        .cols_hide(["uri", "geolocation", "latitude", "longitude"])
+        .tab_options(column_labels_hidden=True)
+    )
     
     # Convert the table to HTML
     table_html = gt_table.as_raw_html()
 
     # Split the HTML into lines for processing
     lines = table_html.split('\n')
-    new_lines = []
 
-    # Process each line to add data attributes
-    for i, line in enumerate(lines):
-        if i == 0:
-            # Add the header line as is
-            new_lines.append(line)
-        else:
-            # Process each row to add data attributes
-            cells = line.split('</td>')
-            if len(cells) >= 2:
-                # Extract latitude and longitude values
-                lat_cell = cells[-2]
-                lng_cell = cells[-1]
+    # Get index of <tr> elements
+    tr_indices = [i for i, line in enumerate(lines) if '<tr>' in line]
 
-                # Assuming the lat and lng values are in the last two cells
-                lat_value = lat_cell.split('>')[-1]
-                lng_value = lng_cell.split('>')[-1]
-
-                # Add data attributes
-                cells[-2] = lat_cell.replace('>', f' data-lat="{lat_value}">')
-                cells[-1] = lng_cell.replace('>', f' data-lng="{lng_value}">')
-
-            # Reconstruct the line
-            new_line = '</td>'.join(cells)
-            new_lines.append(new_line)
+    # Every row (e.g., <tr>) needs to have the latitude and longitude values added as data attributes
+    for i in range(len(lat_values)):
+        lat = lat_values[i] 
+        lng = lng_values[i]
+        tr_index = tr_indices[i]
+        lines[tr_index] = lines[tr_index].replace('<tr>', f'<tr data-lat="{lat}" data-lng="{lng}">')
 
     # Join the lines back into a single HTML string
-    table_html = '\n'.join(new_lines)
+    table_html = '\n'.join(lines)
 
     logging.debug("HTML table created")
     return table_html
