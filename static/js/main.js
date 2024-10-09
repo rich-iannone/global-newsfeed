@@ -19,7 +19,7 @@ function initGlobe() {
 }
 
 function addTableClickHandlers() {
-    const rows = document.querySelectorAll('#news-table tr[data-lat][data-lng]');
+    const rows = document.querySelectorAll('tr[data-lat][data-lng]');
     rows.forEach(row => {
         row.addEventListener('click', () => {
             const lat = parseFloat(row.getAttribute('data-lat'));
@@ -34,7 +34,7 @@ function focusGlobe(lat, lng) {
 }
 
 function updateGlobeMarkers() {
-    const markers = Array.from(document.querySelectorAll('#news-table tr[data-lat][data-lng]')).map(row => ({
+    const markers = Array.from(document.querySelectorAll('tr[data-lat][data-lng]')).map(row => ({
         lat: parseFloat(row.getAttribute('data-lat')),
         lng: parseFloat(row.getAttribute('data-lng')),
         size: 0.1,
