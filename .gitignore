@@ -107,3 +107,4 @@ dmypy.json
 static/news_data.csv
 static/.DS_Store
 .DS_Store
+/static/csv_files
