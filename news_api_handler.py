@@ -130,14 +130,15 @@ def augment_news_data():
     # The prompt for the OpenAI API will be provided as a series of messages
     # that 
     messages = [
-        {"role": "system", "content": "You are an expert at surmmising the geolocation of a news story when"
+        {"role": "system", "content": "You are an expert at surmising the geolocation of a news story when"
     "provided with only the title of the news story, a short summary of the story, and an unstructured"
     "location name (could be a country, a city within a country, etc.)."},
     {"role": "user", "content": f"""
     I'm providing JSON text with the schema: 'uri', 'title',
     'description', and 'geolocation'. Each member is a record of a news story. What I need is the
     city and the country associated with the news story. If you cannot guess the city or its not
-    clear, use the capital city of the country. The country needs to be a two-letter ISO country code.
+    clear, use the capital city of the country. The country needs to be short, standardized versions
+    of the country name in English (e.g., 'United States', 'United Kingdom', 'South Korea', etc.).
     I will pass in the JSON data after the break
     ----
     {tbl_json}
