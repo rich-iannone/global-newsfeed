@@ -27,7 +27,8 @@ def index():
     # This will fetch the news data and write it to a CSV file; here we are relying on the
     # news API to constantly provide fresh articles, so, only the most recent file is needed
     # for the application to function
-    fetch_news_data(max_articles=30, time_threshold_minutes=10)
+    fetch_news_data(max_articles=100, time_threshold_minutes=10)
+
     # Add a small sleep here
     time.sleep(0.1)
 
