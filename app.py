@@ -72,7 +72,6 @@ def make_table_from_csv(csv_file_path):
     lat_values = table["latitude"].to_list()
     lng_values = table["longitude"].to_list()
     publication_dates = table["published_date"].to_list()
-    url_values = table["url"].to_list()
 
     # Combine the title and description into a single column, providing some styling as well
     table = (
