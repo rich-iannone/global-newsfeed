@@ -72,6 +72,7 @@ def make_table_from_csv(csv_file_path):
     lat_values = table["latitude"].to_list()
     lng_values = table["longitude"].to_list()
     publication_dates = table["published_date"].to_list()
+    url_values = table["url"].to_list()
 
     # Combine the title and description into a single column, providing some styling as well
     table = (
@@ -92,14 +93,20 @@ def make_table_from_csv(csv_file_path):
             pl.col("country") +
             "</div>"
         ))
-        .select(["title_description", "city_country"])
+        .with_columns(link=pl.concat_str(
+            '<a href="' +
+            "http://archive.is/newest/" + pl.col("url") + '" target="_blank" rel="noopener noreferrer">' +
+            '<svg aria-hidden="true" role="img" viewBox="0 0 384 512" style="height:1em;width:0.75em;vertical-align:-0.125em;margin-left:auto;margin-right:auto;font-size:inherit;fill:white;overflow:visible;position:relative;"><path d="M320 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l82.7 0L201.4 265.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L448 109.3l0 82.7c0 17.7 14.3 32 32 32s32-14.3 32-32l0-160c0-17.7-14.3-32-32-32L320 0zM80 32C35.8 32 0 67.8 0 112L0 432c0 44.2 35.8 80 80 80l320 0c44.2 0 80-35.8 80-80l0-112c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 112c0 8.8-7.2 16-16 16L80 448c-8.8 0-16-7.2-16-16l0-320c0-8.8 7.2-16 16-16l112 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L80 32z"/></svg>' +
+            "</a>"
+        ))
+        .select(["title_description", "city_country", "link"])
     )
 
     gt_table = (
         GT(table)
-        .fmt_markdown(columns=["title_description", "city_country"])
+        .fmt_markdown(columns=["title_description", "city_country", "link"])
         .opt_table_font(font=google_font(name="Noto Serif"))
-        .cols_width(cases={"city_country": "20%"})
+        .cols_width(cases={"city_country": "20%", "link": "35px"})
         .cols_align(align="center", columns="city_country")
         .tab_options(
             table_background_color="#386890",
