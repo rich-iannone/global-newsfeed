@@ -62,7 +62,9 @@ def fetch_news_data(max_articles=20, time_threshold_minutes=10):
     
     logging.info(f"Writing CSV file: {csv_file_path}")
     with open(csv_file_path, mode='w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['uri','title', 'description', 'url', 'source', 'geolocation']
+        
+        fieldnames = ["uri", "title", "description", "url", "published_date", "source", "geolocation"]
+        
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
         
@@ -85,10 +87,12 @@ def fetch_news_data(max_articles=20, time_threshold_minutes=10):
                     logging.debug(f"Skipping article without any location information: {article}")
                     continue
 
-                title = article.get('title', '') or ''
-                description = article.get('abstract', '') or ''
-                url = article.get('url', '')
-                source = 'New York Times'
+                title = article.get("title", "") or ""
+                description = article.get("abstract", "") or ""
+                url = article.get("url", "")
+                published_date = article.get("published_date", "")
+                source = "New York Times"
+
                 writer.writerow({
                     'uri': uri,
                     'title': title,
