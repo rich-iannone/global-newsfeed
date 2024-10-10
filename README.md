@@ -1,6 +1,6 @@
 # An LLM-augmented Newsfeed
 
-![View of Application](application_view.png)
+https://github.com/user-attachments/assets/86e8bd99-38c8-4ef8-b64f-02a3ae2674a8
 
 This newsfeed application is simple but provides pretty much everything I really need in such an application.
 I was inspired by the Nintendo News Channel (this was on the Nintendo Wii!), which I always though was a fun
