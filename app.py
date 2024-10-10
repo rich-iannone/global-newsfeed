@@ -117,12 +117,14 @@ def make_table_from_csv(csv_file_path):
     # Get index of <tr> elements
     tr_indices = [i for i, line in enumerate(lines) if '<tr>' in line]
 
-    # Every row (e.g., <tr>) needs to have the latitude and longitude values added as data attributes
+    # Every row (e.g., <tr>) needs to have a title attribute with the publication date along
+    # with latitude and longitude values added as data attributes
     for i in range(len(lat_values)):
         lat = lat_values[i] 
         lng = lng_values[i]
+        pdt = publication_dates[i]
         tr_index = tr_indices[i]
-        lines[tr_index] = lines[tr_index].replace('<tr>', f'<tr data-lat="{lat}" data-lng="{lng}">')
+        lines[tr_index] = lines[tr_index].replace('<tr>', f'<tr title="{pdt}" data-lat="{lat}" data-lng="{lng}">')
 
     # Join the lines back into a single HTML string
     table_html = '\n'.join(lines)
