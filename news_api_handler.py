@@ -12,14 +12,14 @@ from openai import OpenAI
 load_dotenv()
 
 NYTIMES_API_KEY = os.getenv('NYTIMES_API_KEY')
-NYTIMES_API_URL = 'https://api.nytimes.com/svc/topstories/v2'
+NYTIMES_API_URL = "https://api.nytimes.com/svc/topstories/v2"
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 CSV_DIR_PATH = "static/csv_files"
 
 # Ensure the CSV directory exists
 os.makedirs(CSV_DIR_PATH, exist_ok=True)
 
-def fetch_news_data(max_articles=20, time_threshold_minutes=10):
+def fetch_news_data(max_articles=60, time_threshold_minutes=10):
     logging.debug("Fetching news from New York Times API")
     
     if not NYTIMES_API_KEY:
@@ -37,19 +37,19 @@ def fetch_news_data(max_articles=20, time_threshold_minutes=10):
     else:
         logging.info("No CSV files found. Fetching new data immediately.")
     
-    sections = ['world', 'us']
+    sections = ["world", "us", "politics", "sports", "movies", "science", "technology"]
     articles = []
     
     for section in sections:
         params = {
-            'api-key': NYTIMES_API_KEY
+            "api-key": NYTIMES_API_KEY
         }
         response = requests.get(f"{NYTIMES_API_URL}/{section}.json", params=params)
         section_data = response.json()
         logging.debug(f"NY Times API response for {section}: {section_data}")
         
-        if 'results' in section_data:
-            articles.extend(section_data['results'])
+        if "results" in section_data:
+            articles.extend(section_data["results"])
         else:
             logging.error(f"Unexpected response structure for section {section}")
     
@@ -66,6 +66,7 @@ def fetch_news_data(max_articles=20, time_threshold_minutes=10):
         fieldnames = ["uri", "title", "description", "url", "published_date", "source", "geolocation"]
         
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
         writer.writeheader()
         
         for article in articles:
@@ -73,16 +74,18 @@ def fetch_news_data(max_articles=20, time_threshold_minutes=10):
             if isinstance(article, dict):
 
                 # Get the uri so it serves as a unique identifier
-                uri = article.get('uri', '')
+                uri = article.get("uri", "")
 
-                # If the `item_type` is not 'Article', skip the article
-                if article.get('item_type') != 'Article':
+                # If the `item_type` is not "Article", skip the article
+                if article.get("item_type") != "Article":
                     logging.debug(f"Skipping non-article item: {article}")
                     continue
 
                 # Get the country from the first `geo_facet` item;
                 # if not present then skip the article
-                geolocation = article.get('geo_facet', [''])[0] if article.get('geo_facet') else ''
+                geolocation = article.get("geo_facet", [""])[0] if article.get("geo_facet") else ""
+
+                # Don't keep an article that doesn't have any geolocation info
                 if not geolocation:
                     logging.debug(f"Skipping article without any location information: {article}")
                     continue
@@ -94,12 +97,13 @@ def fetch_news_data(max_articles=20, time_threshold_minutes=10):
                 source = "New York Times"
 
                 writer.writerow({
-                    'uri': uri,
-                    'title': title,
-                    'description': description,
-                    'url': url,
-                    'source': source,
-                    'geolocation': geolocation
+                    "uri": uri,
+                    "title": title,
+                    "description": description,
+                    "url": url,
+                    "published_date": published_date,
+                    "source": source,
+                    "geolocation": geolocation
                 })
             else:
                 logging.error(f"Unexpected article format: {article}")
@@ -121,8 +125,8 @@ def augment_news_data():
     # Read the CSV file into a Polars table
     tbl_data = pl.read_csv(csv_file_path)
 
-    # If the DataFrame has the columns 'latitude', and 'longitude', then skip the augmentation
-    if 'latitude' in tbl_data.columns and 'longitude' in tbl_data.columns:
+    # If the DataFrame has the columns "latitude", and "longitude", then skip the augmentation
+    if "latitude" in tbl_data.columns and "longitude" in tbl_data.columns:
         logging.info("DataFrame already has the required columns. Skipping augmentation.")
         return
     
@@ -168,9 +172,9 @@ def augment_news_data():
     response_json = response.choices[0].message.content
 
     # Remove the fenced code block text (if present) from the response
-    response_json = response_json.replace('```json\n', '').replace('\n```', '')
+    response_json = response_json.replace("```json\n", "").replace("\n```", "")
 
-    # Write the augmented data to the same CSV file through a join on the 'uri' field
+    # Write the augmented data to the same CSV file through a join on the "uri" field
     tbl_augmented = pl.read_json(StringIO(response_json))
     tbl_augmented = tbl_augmented.select(["uri", "city", "country", "latitude", "longitude"])
     tbl_complete = tbl_data.join(tbl_augmented, on="uri", how="left")
@@ -180,7 +184,7 @@ def augment_news_data():
 def get_newest_csv_file():
     logging.debug("Selecting the newest CSV file")
     csv_files = sorted(
-        [os.path.join(CSV_DIR_PATH, f) for f in os.listdir(CSV_DIR_PATH) if f.startswith('news_data_') and f.endswith('.csv')],
+        [os.path.join(CSV_DIR_PATH, f) for f in os.listdir(CSV_DIR_PATH) if f.startswith("news_data_") and f.endswith(".csv")],
         key=lambda x: os.path.getmtime(x),
         reverse=True
     )
@@ -196,7 +200,7 @@ def cull_old_csv_files(max_files=5):
     logging.debug("Culling old CSV files")
     now = datetime.now()
     csv_files = sorted(
-        [f for f in os.listdir(CSV_DIR_PATH) if f.startswith('news_data_') and f.endswith('.csv')],
+        [f for f in os.listdir(CSV_DIR_PATH) if f.startswith("news_data_") and f.endswith(".csv")],
         key=lambda x: os.path.getmtime(os.path.join(CSV_DIR_PATH, x))
     )
     
