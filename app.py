@@ -68,9 +68,10 @@ def make_table_from_csv(csv_file_path):
     logging.debug(f"Reading CSV file to create HTML table: {csv_file_path}")
     table = pl.read_csv(csv_file_path)
 
-    # Get a list of all the latitude and longitude values
-    lat_values = table['latitude'].to_list()
-    lng_values = table['longitude'].to_list()
+    # Get a list of all the latitude, longitude, and publication date values
+    lat_values = table["latitude"].to_list()
+    lng_values = table["longitude"].to_list()
+    publication_dates = table["published_date"].to_list()
 
     # Combine the title and description into a single column, providing some styling as well
     table = (
