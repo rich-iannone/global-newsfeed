@@ -1,5 +1,6 @@
 from flask import Flask, render_template
 import os
+import time
 import logging
 import polars as pl
 from great_tables import GT, google_font
