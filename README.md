@@ -3,7 +3,8 @@
 ![View of Application](application_view.png)
 
 This newsfeed application is simple but provides pretty much everything I really need in such an application.
-I was inspired by the Nintendo News Channel (this was on the Nintendo Wii!), which I always though was a fun\way to look at world news given that you have a globe view and the different stories are presented as icons that
+I was inspired by the Nintendo News Channel (this was on the Nintendo Wii!), which I always though was a fun
+way to look at world news given that you have a globe view and the different stories are presented as icons that
 are interactive (though, I really like that you could just sit back and watch the globe spin every few seconds,
 showing you story summaries very quickly).
 
