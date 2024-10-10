@@ -3,15 +3,14 @@
 ![View of Application](application_view.png)
 
 This newsfeed application is simple but provides pretty much everything I really need in such an application.
-I was inspired by the Nintendo News Channel, which I always though was a fun way to look at world news given
-that you have a globe view and the different stories are presented as icons that are interactive (though, I
-really like that you could just sit back and watch the globe spin every few seconds, showing you story summaries
-very quickly).
+I was inspired by the Nintendo News Channel (this was on the Nintendo Wii!), which I always though was a fun\way to look at world news given that you have a globe view and the different stories are presented as icons that
+are interactive (though, I really like that you could just sit back and watch the globe spin every few seconds,
+showing you story summaries very quickly).
 
 ![Nintendo News Channel, the inspiration for this](nintendo_news_channel.png)
 
-While this application doesn't have automated tour through the news events of the world, it
-at least has a table of news articles. Each row is an article obtained from the New York Times
+While this application doesn't have automated tour through the news events of the world (nor any background music),
+it at least has a table of news articles. Each row is an article obtained from the New York Times
 'Top Stories' API endpoint. On the right side, there *is* a globe with markers showing the
 *location* of each news article.
 
