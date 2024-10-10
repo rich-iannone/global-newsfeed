@@ -144,12 +144,14 @@ def augment_news_data():
     "provided with only the title of the news story, a short summary of the story, and an unstructured"
     "location name (could be a country, a city within a country, etc.)."},
     {"role": "user", "content": f"""
-    I'm providing JSON text with the schema: 'uri', 'title',
-    'description', and 'geolocation'. Each member is a record of a news story. What I need is the
-    city and the country associated with the news story. If you cannot guess the city or its not
-    clear, use the capital city of the country. The country needs to be short, standardized versions
-    of the country name in English (e.g., 'United States', 'United Kingdom', 'South Korea', etc.).
-    I will pass in the JSON data after the break
+    I'm providing JSON text with the schema: 'uri', 'title', 'description', and 'geolocation'. Each
+    entry is a record of a news story. What I need is the city and the country associated with the news
+    story. Sometimes this can be obtained directly from the 'geolocation' field. If that's empty, look at
+    the text in the 'description' and 'geolocation' fields and guess which city and country this story
+    focuses on. If you have the country figured out but cannot ascertain the city, use the capital city of
+    the country. The country needs to be short, standardized versions of the country name in English
+    (e.g., 'United States', 'United Kingdom', 'South Korea', etc.). I will pass in the JSON data after
+    the break.
     ----
     {tbl_json}
     ----
@@ -157,7 +159,6 @@ def augment_news_data():
     input. The fields required are: 'city', 'country', 'latitude', and 'longitude'. I would also like
     the input 'uri' field to be included so that I can join the returned JSON with the complete
     dataset (that 'uri' field will serve as an ID for each member.
-
     One last thing, be sure to give me just the JSON string without any conversational text before
     and after. I want to be sure I can depend on your output as consistent input for my processing.
     """},
