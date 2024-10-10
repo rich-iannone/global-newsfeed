@@ -15,7 +15,7 @@ it at least has a table of news articles. Each row is an article obtained from t
 'Top Stories' API endpoint. On the right side, there *is* a globe with markers showing the
 *location* of each news article.
 
-The application does the following things to make this work:
+The application does the following things to make it all work:
 
 - the articles are fetched as JSON from NYT (mix of different categories, omitting some)
 - JSON is parsed and written to CSV with the following fields
